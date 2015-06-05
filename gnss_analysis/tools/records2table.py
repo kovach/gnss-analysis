@@ -102,9 +102,9 @@ class StoreToHDF5(object):
         m = exclude_fields(msg)
         m.update({'host_offset': host_offset, 'host_time': host_time})
         if time in self.ephemerides:
-          self.ephemerides[time].update({msg.prn: m})
+          self.ephemerides[host_offset].update({msg.prn: m})
         else:
-          self.ephemerides[time] = {msg.prn: m}
+          self.ephemerides[host_offset] = {msg.prn: m}
 
   def _process_pos(self, host_offset, host_time, msg):
     if type(msg) is nav.MsgGPSTime:
