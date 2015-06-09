@@ -98,10 +98,9 @@ class StoreToHDF5(object):
   def _process_eph(self, host_offset, host_time, msg):
     if type(msg) is ob.MsgEphemeris or type(msg) is dep.MsgEphemerisDeprecated:
       if msg.healthy == 1 and msg.valid == 1:
-        time = gpstime.gpst_components2datetime(msg.toe_wn, msg.toe_tow)
         m = exclude_fields(msg)
         m.update({'host_offset': host_offset, 'host_time': host_time})
-        if time in self.ephemerides:
+        if host_offset in self.ephemerides:
           self.ephemerides[host_offset].update({msg.prn: m})
         else:
           self.ephemerides[host_offset] = {msg.prn: m}

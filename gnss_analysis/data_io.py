@@ -9,6 +9,7 @@
 # EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE IMPLIED
 # WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A PARTICULAR PURPOSE.
 
+from sets import ImmutableSet
 import pandas as pd
 import numpy as np
 from pynex.dd_tools import sds_with_lock_counts
@@ -96,11 +97,21 @@ def get_timed_ephs(filled_ephs, t):
     The most last ephemerises before t in filled_ephs.
 
   """
-  ephs_before = filled_ephs[filled_ephs.items < t]
-  if len(ephs_before.items) > 0:
-    return ephs_before.ix[-1]
-  else:
-    return filled_ephs.ix[0]
+  output = {}
+  for prn in filled_ephs.minor_axis:
+    slice = filled_ephs[:, 'approx_gps_time', prn].dropna()
+    ephs = filled_ephs[slice[slice < t].index, :, prn]
+    if len(ephs.columns) > 0:
+      output[prn] = ephs.iloc[:, -1]
+    else:
+      output[prn] = filled_ephs.iloc[0].ix[:, prn]
+  return output
+
+  #ephs_before = filled_ephs[filled_ephs.ix[:, 'approx_gps_time'] < t]
+  #if len(ephs_before.items) > 0:
+  #  return ephs_before.ix[-1]
+  #else:
+  #  return filled_ephs.ix[0]
 
 
 def construct_pyobj_eph(eph):
@@ -229,6 +240,7 @@ def mk_sdiffs_and_abs_pos(ephs, rover_obs, base_obs):
   ecef_rem = dict()
   receiver_positions = dict()
   prev_time = None
+  sat_set = ImmutableSet()
   for t, df in j.iteritems():
     gpst = datetime2gpst(t)
     eph_t = get_timed_ephs(ephs, t)
@@ -243,6 +255,10 @@ def mk_sdiffs_and_abs_pos(ephs, rover_obs, base_obs):
     clock_errs = dict()
     sdiffs_now = dict()
     for sat in df.axes[1]:
+      # TODO remove
+      e = eph_t[sat]
+      sat_set = sat_set.union([e.dn+e.inc+e.af1+e.toe_wn])
+      print e
       sd = df[sat]
       sat_pos, sat_vel, clock_err, clock_rate_err =  \
         calc_sat_state(construct_pyobj_eph(eph_t[sat]), gpst)
